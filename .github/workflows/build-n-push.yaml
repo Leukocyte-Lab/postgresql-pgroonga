@@ -1,0 +1,100 @@
+# This is a basic workflow to help you get started with Actions
+
+name: Build and Push
+
+# Controls when the action will run. Triggers the workflow on push or pull request
+# events but only for the master branch
+on:
+  push:
+    branches:
+      - master
+      - develop
+      - "releases/**"
+    tags:
+      - "**"
+  pull_request:
+    branches:
+      - master
+      - develop
+      - "releases/**"
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  build-image:
+    name: Build Image 💿
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'push' }}
+    outputs:
+      tags_name: ${{ steps.strip.outputs.tags_name }}
+
+    steps:
+      - name: Checkout 🛎️
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      - name: Install SSH key 🔑
+        if: ${{ !env.ACT }}
+        uses: shimataro/ssh-key-action@v2.0.3
+        with:
+          key: ${{ secrets.SSH_KEY }}
+          known_hosts: ${{ secrets.KNOWN_HOSTS }}
+
+      - name: Start ssh-agent 👩‍✈️
+        if: ${{ !env.ACT }}
+        run: |
+          eval `ssh-agent`
+          ssh-add
+          echo "SSH_AUTH_SOCK=$SSH_AUTH_SOCK" >> $GITHUB_ENV
+          echo "SSH_AGENT_PID=$SSH_AGENT_PID" >> $GITHUB_ENV
+
+      - name: Setup Docker Buildx 🚧
+        uses: docker/setup-buildx-action@v1
+
+      - name: Cache Docker layers 💾
+        uses: actions/cache@v2
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-buildx-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-buildx-
+
+      - name: Login in private registry 🧑🏻‍💻
+        uses: docker/login-action@v1
+        with:
+          registry: ${{ secrets.PRIVATE_REGISTRY_URL }}
+          username: ${{ secrets.PRIVATE_REGISTRY_USERNAME }}
+          password: ${{ secrets.PRIVATE_REGISTRY_PASSWORD }}
+
+      - name: Build & Push Docker Images 🎁
+        uses: docker/build-push-action@v2
+        if: ${{ contains(github.ref, 'refs/heads/') }}
+        with:
+          context: .
+          cache-from: type=local,src=/tmp/.buildx-cache
+          cache-to: type=local,dest=/tmp/.buildx-cache
+          push: true
+          tags: |
+            ${{ secrets.PRIVATE_REGISTRY_URL }}/leukocyte-lab/postgresql:${{ github.sha }}
+          ssh: |
+            default
+
+      - name: Strip tags name 🏷
+        id: strip
+        if: ${{ contains(github.ref, 'refs/tags/') }}
+        # Strip prefix 'refs/tags' and suffix '#{worker_name}' then set into output
+        run: STRIP=${GITHUB_REF#refs/tags/}; echo "::set-output name=tags_name::${STRIP%#*}"
+
+      - name: Build & Push Docker Images with latest tag 🎁
+        if: ${{ contains(github.ref, 'refs/tags/') }}
+        uses: docker/build-push-action@v2
+        with:
+          context: .
+          cache-from: type=local,src=/tmp/.buildx-cache
+          cache-to: type=local,dest=/tmp/.buildx-cache
+          push: true
+          tags: |
+            ${{ secrets.PRIVATE_REGISTRY_URL }}/leukocyte-lab/postgresql:latest
+            ${{ secrets.PRIVATE_REGISTRY_URL }}/leukocyte-lab/postgresql:${{ steps.strip.outputs.tags_name }}
+          ssh: |
+            default
