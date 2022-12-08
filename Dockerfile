@@ -32,6 +32,3 @@ RUN apt-get remove -y wget build-essential && \
     apt-get clean && rm -rf /var/lib/apt/lists /var/cache/apt/archives
 WORKDIR /
 RUN rm -rf /tmp/pgroonga
-
-# Switch back to non-root user
-USER 1001
