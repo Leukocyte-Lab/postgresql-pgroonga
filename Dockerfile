@@ -10,7 +10,7 @@ RUN mkdir -p /tmp/pgroonga
 WORKDIR /tmp/pgroonga
 
 # Install dependencies packages
-RUN install_packages wget build-essential
+RUN install_packages wget build-essential curl jq
 
 # Install PGroonga dependencies
 RUN wget https://packages.groonga.org/debian/groonga-apt-source-latest-bullseye.deb && \
