@@ -20,12 +20,24 @@ The Captain protected publisher preserves its existing private-build inputs sepa
 
 Rollback is to keep all gates disabled and continue using the previously verified image/chart/deployment combination. These workflows do not delete or modify Harbor, published artifacts, customer settings, permissions or historical tags. Candidate release worktrees are local backports, not branches to compare directly against a newer default branch containing unrelated application changes.
 
-Before pushing or opening a private Draft PR, review repository/app triggers and Draft review-bot settings. The current remote default workflow of `build-n-push` publishes a GitLab fixture on any push that uses that unchanged workflow. A push uses the workflow at its event SHA/ref, so a branch containing this complete candidate is not automatically governed by the old default-branch workflow. This candidate's push filter accepts only `master`; a `codex/*` branch push does not match it. This corrects the earlier broader assumption about the default branch. No branch has been pushed, and remote app/review side effects remain unverified. See [GitHub workflow selection](https://docs.github.com/en/actions/concepts/workflows-and-actions/workflows#workflow-triggers) and [push events](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#push).
+Before pushing or opening a private Draft PR, review repository/app triggers and Draft review-bot settings. The current remote default workflow of `build-n-push` publishes a GitLab fixture on any push that uses that unchanged workflow. A push uses the workflow at its event SHA/ref, so a branch containing this complete candidate is not automatically governed by the old default-branch workflow. This candidate's push filter accepts only `master`; a `codex/*` branch push does not match it. This corrects the earlier broader assumption about the default branch. The prior local-only checkpoint is superseded by the public [Draft PR #2](https://github.com/Leukocyte-Lab/postgresql-pgroonga/pull/2), which remains unmerged. Private-package publication and consumer access remain unverified. See [GitHub workflow selection](https://docs.github.com/en/actions/concepts/workflows-and-actions/workflows#workflow-triggers) and [push events](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#push).
 
 ## 本專案的額外條件
 
-來源 repo 是 public，保持不變；目的 container 仍需已存在 private package。既有 bitnami PostgreSQL15.1.0/PGroonga2.4.2 建置不升版，未驗證 upstream fetch/build。
+來源 repo 是 public，保持不變；目的 container 仍需已存在 private package。PostgreSQL 15.1.0／Debian 11-r0 與 PGroonga 2.4.2 宣告版本不升級。正常 PR CI 保留實際 push:false Docker build；公開 dependency 下載並非部署或真實 target 測試。
 
 ## Strict package ownership gate
 
 Metadata must identify the exact container package, Leukocyte-Lab owner, private visibility and this same source repository linkage. Missing or different linkage stops publication; never change package linkage/permissions to satisfy this guard. A metadata read still does not prove Actions write access. All checks here are synthetic fixtures, not destination verification.
+
+## Exact-version upstream archive dependency
+
+Public PR run 45846801790 passed the five synthetic guards but could not resolve the original `bitnami/postgresql:15.1.0-debian-11-r0` base. [Bitnami's official catalog notice](https://github.com/bitnami/containers/issues/83267) states that older versioned tags moved to `docker.io/bitnamilegacy`; that archive receives no updates or support and is a temporary migration dependency.
+
+The Dockerfile now pins the same archive version tag to the anonymously readable manifest:
+
+`docker.io/bitnamilegacy/postgresql:15.1.0-debian-11-r0@sha256:27915588d5203a10a1c23624d9c81644437f33b7c224e25f79bcd9bd09bbb8e2`
+
+On 2026-11-26, an anonymous Docker Registry v2 metadata read returned a Docker v2 single manifest (741 bytes); its response digest matched the SHA-256 of its exact bytes. No Docker credential helper, personal Docker Hub credentials, layers, registry copy, local image build or container run was used. The original deleted Bitnami tag's digest is not independently established, so this does not claim byte equivalence to that old tag. A separately hash-verified 9,311-byte public config reports linux/amd64, matching the hosted Linux runner; the original config and its Env fields were discarded. Installed binary version, full build and runtime compatibility still require CI/isolated acceptance; metadata is not those tests.
+
+Only the FROM reference and this documentation change. PGroonga remains 2.4.2; package sources, TLS/APT verification, build commands and publication/workflow gates remain unchanged. This patch neither upgrades versions nor turns a build-dependency fix into permission to publish, deploy or replace any image tag.
