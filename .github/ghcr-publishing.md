@@ -25,3 +25,7 @@ Before pushing or opening a private Draft PR, review repository/app triggers and
 ## 本專案的額外條件
 
 來源 repo 是 public，保持不變；目的 container 仍需已存在 private package。既有 bitnami PostgreSQL15.1.0/PGroonga2.4.2 建置不升版，未驗證 upstream fetch/build。
+
+## Strict package ownership gate
+
+Metadata must identify the exact container package, Leukocyte-Lab owner, private visibility and this same source repository linkage. Missing or different linkage stops publication; never change package linkage/permissions to satisfy this guard. A metadata read still does not prove Actions write access. All checks here are synthetic fixtures, not destination verification.
