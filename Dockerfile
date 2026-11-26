@@ -1,4 +1,4 @@
-FROM bitnami/postgresql:15.1.0-debian-11-r0
+FROM docker.io/bitnamilegacy/postgresql:15.1.0-debian-11-r0@sha256:27915588d5203a10a1c23624d9c81644437f33b7c224e25f79bcd9bd09bbb8e2
 
 ENV DEBIAN_FRONTEND=noninteractive
 
